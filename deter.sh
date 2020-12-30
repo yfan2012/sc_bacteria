@@ -7,17 +7,21 @@ datadir=/dilithium/Data/NGS/projects/dunlop_rna/deter_data
 if [ $1 == dl ] ; then
     listfile=$datadir/accession_list.txt
 
-    mkdir -p $datadir/fastqs
     while read p ; do
-	fastq-dump --outdir $datadir/fastqs $p
+	fastq-dump \
+	    -O $datadir/fastqs \
+	    --split-files \
+	    $p
     done < $listfile
+
 fi
 
 if [ $1 == align ] ; then
     hisat2-build $datadir/ref/ecoli_k12.fa $datadir/ref/CFP-LAA-genome
 
     mkdir -p $datadir/align
-    for i in $datadir/fastqs/*fastq ;
+    ##for i in $datadir/fastqs/*fastq ;
+    for i in SRR12518289 ; 
     do
 	prefix=`basename $i .fastq`
 
@@ -26,7 +30,7 @@ if [ $1 == align ] ; then
 	    echo ALIGNING $prefix
 	    hisat2 -p 36 \
 		   -x $datadir/ref/CFP-LAA-genome \
-		   -U $i | \
+		   --sra-acc $i | \
 		samtools view -@ 36 -b | \
 		samtools sort -@ 36 -o $datadir/align/$prefix.sorted.bam
 

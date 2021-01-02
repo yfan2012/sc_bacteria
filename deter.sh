@@ -52,12 +52,12 @@ if [ $1 == align ] ; then
 	prefix=`basename $i _1.fastq.gz`
 
 	echo ALIGNING $prefix
-	hisat2 -p 36 \
+	hisat2 -p 72 \
 	       -x $datadir/ref/ecoli_p24KmNB82 \
-	       -m1 $i \
-	       -m2 $datadir/fastqs/${prefix}_2.fastq.gz \
-	    samtools view -@ 36 -b | \
-	    samtools sort -@ 36 -o $datadir/align/$prefix.sorted.bam
+	       -1 $datadir/trimmed/${prefix}_fwd_paired.fq.gz \
+	       -2 $datadir/trimmed/${prefix}_rev_paired.fq.gz | \
+	    samtools view -@ 72 -b | \
+	    samtools sort -@ 72 -o $datadir/align/$prefix.sorted.bam
 	
 	samtools index $datadir/align/$prefix.sorted.bam
     done
@@ -71,17 +71,16 @@ if [ $1 == bowtie ] ; then
     do
 	prefix=`basename $i .fastq`
 
-	if [ ! -f $prefix.sorted.bam.bai ] ; then
+	echo ALIGNING $prefix
+	bowtie2 -p 24 \
+		-x $datadir/ref/ecoli_p24KmNB82 \
+		-1 $datadir/trimmed/${prefix}_fwd_paired.fq.gz \
+		-2 $datadir/trimmed/${prefix}_fwd_paired.fq.gz | \
+	    samtools view -@ 24 -b | \
+	    samtools sort -@ 24 -o $datadir/align/${prefix}_bowtie.sorted.bam
+	
+	samtools index $datadir/align/${prefix}_bowtie.sorted.bam
 
-	    echo ALIGNING $prefix
-	    bowtie2 -p 24 \
-		   -x $datadir/ref/ecoli_p24KmNB82 \
-		   -U $i | \
-		samtools view -@ 24 -b | \
-		samtools sort -@ 24 -o $datadir/align/$prefix.sorted.bam
-
-	    samtools index $datadir/align/$prefix.sorted.bam
-	fi
     done
 fi
 

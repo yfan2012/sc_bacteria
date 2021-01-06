@@ -42,6 +42,7 @@ if [ $1 == makeref ] ; then
 fi
 
 ref=$datadir/ref/ecoli_p24KmNB82.fa
+deterref=$datadir/ref/CFP-LAA-genome.fa
 
 if [ $1 == align ] ; then
     hisat2-build $ref $datadir/ref/ecoli_p24KmNB82
@@ -67,19 +68,60 @@ if [ $1 == bowtie ] ; then
     bowtie2-build $ref $datadir/ref/ecoli_p24KmNB82
 
     mkdir -p $datadir/align
-    for i in $datadir/fastqs/*fastq ;
+    for i in $datadir/fastqs/SRR12518289_1.fastq.gz ;
     do
-	prefix=`basename $i .fastq`
+	prefix=`basename $i _1.fastq.gz`
 
 	echo ALIGNING $prefix
-	bowtie2 -p 24 \
+	bowtie2 -p 54 \
 		-x $datadir/ref/ecoli_p24KmNB82 \
 		-1 $datadir/trimmed/${prefix}_fwd_paired.fq.gz \
-		-2 $datadir/trimmed/${prefix}_fwd_paired.fq.gz | \
-	    samtools view -@ 24 -b | \
-	    samtools sort -@ 24 -o $datadir/align/${prefix}_bowtie.sorted.bam
+		-2 $datadir/trimmed/${prefix}_rev_paired.fq.gz | \
+	    samtools view -@ 54 -b | \
+	    samtools sort -@ 54 -o $datadir/align/${prefix}_bowtie.sorted.bam
 	
 	samtools index $datadir/align/${prefix}_bowtie.sorted.bam
+
+    done
+fi
+
+if [ $1 == align_deterref ] ; then
+    hisat2-build $deterref $datadir/ref/CFP-LAA-genome
+
+    mkdir -p $datadir/align
+    for i in $datadir/fastqs/SRR12518289_1.fastq.gz ;
+    do
+	prefix=`basename $i _1.fastq.gz`
+
+	echo ALIGNING $prefix
+	hisat2 -p 72 \
+	       -x $datadir/ref/ecoli_p24KmNB82 \
+	       -1 $datadir/trimmed/${prefix}_fwd_paired.fq.gz \
+	       -2 $datadir/trimmed/${prefix}_rev_paired.fq.gz | \
+	    samtools view -@ 72 -b | \
+	    samtools sort -@ 72 -o $datadir/align/${prefix}_deterref.sorted.bam
+	
+	samtools index $datadir/align/${prefix}_deterref.sorted.bam
+    done
+fi
+
+if [ $1 == bowtie_deterref ] ; then
+    bowtie2-build $deterref $datadir/ref/CFP-LAA-genome
+
+    mkdir -p $datadir/align
+    for i in $datadir/fastqs/SRR12518289_1.fastq.gz ;
+    do
+	prefix=`basename $i _1.fastq.gz`
+
+	echo ALIGNING $prefix
+	bowtie2 -p 54 \
+		-x $datadir/ref/CFP-LAA-genome \
+		-1 $datadir/trimmed/${prefix}_fwd_paired.fq.gz \
+		-2 $datadir/trimmed/${prefix}_rev_paired.fq.gz | \
+	    samtools view -@ 54 -b | \
+	    samtools sort -@ 54 -o $datadir/align/${prefix}_bowtie_deterref.sorted.bam
+	
+	samtools index $datadir/align/${prefix}_bowtie_deterref.sorted.bam
 
     done
 fi

@@ -24,4 +24,19 @@ with open(deterref, 'w') as f:
     f.write('>p24KmNB82'+'\n')
     f.write(plasdict['p24KmNB82']+'\n')
     f.close()
+
+
+
+deter_transcriptome=refdir+'/ecoli_p24KmNB82_transcriptome.fa'
+ecolixcriptfile=refdir+'/ecoli_k12_transcriptome.fa'
+ecolixcript=pysam.FastaFile(ecolixcriptfile)
+xcripts=ecolixcript.references
+ecolixcriptdict={ x:ecolixcript.fetch(x) for x in xcripts }
+with open(deter_transcriptome, 'w') as f:
+    for i in ecolixcriptdict:
+        f.write('>'+i+'\n')
+        f.write(ecolixcriptdict[i]+'\n')
+    f.write('>p24KmNB82'+'\n')
+    f.write(plasdict['p24KmNB82']+'\n')
+    f.close()
     

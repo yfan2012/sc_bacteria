@@ -13,7 +13,6 @@ if [ $1 == dl ] ; then
 	    --split-files \
 	    $p
     done < $listfile
-
 fi
 
 if [ $1 == zip ] ; then
@@ -126,3 +125,106 @@ if [ $1 == bowtie_deterref ] ; then
     done
 fi
 
+if [ $1 == aligncheck ] ; then
+    for i in $datadir/align/*sorted.bam ;
+    do
+	prefix=`basename $i .sorted.bam`
+	outfile=$datadir/align/$prefix.stats.tsv
+
+	echo $outfile
+	
+	if [ ! -s $outfile ] ; then
+	    samtools flagstat \
+		     -@ 24 \
+		     -O tsv \
+		     $i \
+		     > $outfile
+	fi
+    done
+fi
+
+if [ $1 == alignqc ] ; then
+    touch $datadir/align/alignrates.csv
+    for i in $datadir/align/*stats.tsv ;
+    do
+	prefix=`basename $i .stats.tsv`
+	rate=`head -6 $i | tail -1 | awk '{print $1}'`
+	echo $prefix,$rate >> $datadir/align/alignrates.csv
+    done
+fi
+
+##using reference annotation gff from ncbi and renamed to ecoli_k12.gff
+if [ $1 == make_xcript_ref ] ; then
+    gffread \
+	-w $datadir/ref/ecoli_k12_transcriptome.fa \
+	-g $ref \
+	$datadir/ref/ecoli_k12.gff
+	
+    cp $datadir/ref/ecoli_k12_transcriptome.fa $datadir/ref/ecoli_p24KmNB82_transcriptome.fa
+    grep -A 57 p24KmNB82 $datadir/ref/butzin_plasmids.fa >> $datadir/ref/ecoli_p24KmNB82_transcriptome.fa
+fi
+
+xcriptref=$datadir/ref/ecoli_p24KmNB82_transcriptome.fa
+
+if [ $1 == salmon ] ; then
+    salmon index -t $xcriptref -i $datadir/ref/ecoli_p24KmNB82_transcriptome
+
+    mkdir -p $datadir/salmon
+    
+    for i in $datadir/fastqs/*_1.fastq.gz ;
+    do
+	prefix=`basename $i _1.fastq.gz`
+	
+	salmon quant \
+	       -i $datadir/ref/ecoli_p24KmNB82_transcriptome \
+	       -l A \
+	       -1 $datadir/trimmed/${prefix}_fwd_paired.fq.gz \
+	       -2 $datadir/trimmed/${prefix}_rev_paired.fq.gz  \
+	       -p 54 \
+	       --validateMappings \
+	       --gcBias \
+	       -o $datadir/salmon/$prefix
+    done
+fi
+
+
+if [ $1 == bowtie_xcriptome ] ; then
+    bowtie2-build $xcriptref $datadir/ref/ecoli_p24KmNB82_transcriptome
+
+    mkdir -p $datadir/align
+    for i in $datadir/fastqs/SRR12518289_1.fastq.gz ;
+    do
+	prefix=`basename $i _1.fastq.gz`
+
+	echo ALIGNING $prefix
+	bowtie2 -p 54 \
+		-x $datadir/ref/ecoli_p24KmNB82_transcriptome \
+		-1 $datadir/trimmed/${prefix}_fwd_paired.fq.gz \
+		-2 $datadir/trimmed/${prefix}_rev_paired.fq.gz | \
+	    samtools view -@ 54 -b | \
+	    samtools sort -@ 54 -o $datadir/align/${prefix}_bowtie_xcriptome.sorted.bam
+	
+	samtools index $datadir/align/${prefix}_bowtie_xcriptome.sorted.bam
+    done
+fi
+
+
+if [ $1 == align_xcriptome ] ; then
+    hisat2-build $xcriptref $datadir/ref/ecoli_p24KmNB82_transcriptome
+
+    mkdir -p $datadir/align
+    for i in $datadir/fastqs/SRR12518289_1.fastq.gz ;
+    do
+	prefix=`basename $i _1.fastq.gz`
+
+	echo ALIGNING $prefix
+	hisat2 -p 72 \
+	       -x $datadir/ref/ecoli_p24KmNB82_transcriptome \
+	       -1 $datadir/trimmed/${prefix}_fwd_paired.fq.gz \
+	       -2 $datadir/trimmed/${prefix}_rev_paired.fq.gz | \
+	    samtools view -@ 72 -b | \
+	    samtools sort -@ 72 -o $datadir/align/${prefix}_xcriptome.sorted.bam
+	
+	samtools index $datadir/align/${prefix}_xcriptome.sorted.bam
+    done
+fi

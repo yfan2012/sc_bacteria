@@ -1,6 +1,7 @@
 #!/bin/bash
 
 datadir=/dilithium/Data/NGS/projects/dunlop_rna/petriseq_data
+dbxdir=~/Dropbox/yfan/dunlop/single_cell/petriseq
 
 if [ $1 == grab_supp ] ; then
     wget https://static-content.springer.com/esm/art%3A10.1038%2Fs41564-020-0729-6/MediaObjects/41564_2020_729_MOESM4_ESM.gz
@@ -16,4 +17,15 @@ if [ $1 == sep_experiments ] ; then
 
     head -1 $datadir/supp_data/41564_2020_729_MOESM4_ESM > $datadir/supp_data/growth_mix.tsv
     grep SB442 $datadir/supp_data/41564_2020_729_MOESM4_ESM >> $datadir/supp_data/growth_mix.tsv
+fi
+
+if [ $1 == dl_sra ] ; then
+    listfile=$dbxdir/sra_accessionlist.txt
+
+    while read p ; do
+	fastq-dump \
+	    -O $datadir/raw \
+	    --split-files \
+	    $p
+    done < $listfile
 fi

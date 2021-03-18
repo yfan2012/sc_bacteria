@@ -1,6 +1,6 @@
 #!/bin/bash
 
-datadir=/dilithium/Data/NGS/projects/dunlop_rna/microsplit_data
+datadir=/dilithium/Data/NGS/projects/dunlop_rna/microsplit
 
 if [ $1 == dl ] ; then
     mkdir -p $datadir/fastqs

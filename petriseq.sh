@@ -1,6 +1,6 @@
 #!/bin/bash
 
-datadir=/dilithium/Data/NGS/projects/dunlop_rna/petriseq_data
+datadir=/dilithium/Data/NGS/projects/dunlop_rna/petriseq
 dbxdir=~/Dropbox/yfan/dunlop/single_cell/petriseq
 
 if [ $1 == grab_supp ] ; then

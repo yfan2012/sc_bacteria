@@ -2,7 +2,7 @@
 
 ##code for looking at data from deter paper https://www.biorxiv.org/content/10.1101/2020.08.27.270272v2
 
-datadir=/dilithium/Data/NGS/projects/dunlop_rna/deter_data
+datadir=/dilithium/Data/NGS/projects/dunlop_rna/deter
 
 if [ $1 == dl ] ; then
     listfile=$datadir/accession_list.txt

@@ -2,22 +2,26 @@ library(tidyverse)
 library(RColorBrewer)
 
 
-datadir='/dilithium/Data/NGS/projects/dunlop_rna/petriseq_data'
+datadir='/dilithium/Data/NGS/projects/dunlop_rna/petriseq'
 dbxdir='~/Dropbox/yfan/dunlop/single_cell/petriseq'
 
-gene_entropy <- function(nk) {
-    tot=colSums(nk)
-    tot[tot==0]=1 #to avoid nans later
-    
-    ##calculate pi
-    p=t(t(nk)/tot)
+gene_entropy <- function(geneinfo) {
+    interval=5
+    high=max(geneinfo)
+    expranges=tibble(low=seq(0, high, interval),
+                     high=seq(interval, high+interval, interval))
+    exp=expranges %>%
+        rowwise() %>%
+        mutate(count=sum(geneinfo>=low & geneinfo<high)) %>%
+        ungroup() %>%
+        mutate(frac=count/sum(count))
+    exp$frac[exp$frac==0]=1 ##since p*log(p)=0 where p=0 by convention
+    exp=exp %>%
+        mutate(logfrac=log(frac, 10)) %>%
+        mutate(ent=-frac*logfrac)
 
-    ##since p*log(p)=0 where p=0 by convention
-    p[p==0]=1
-    
-    ##elementwise multiplication
-    ent=as_tibble(enframe(colSums(-p*log(p))))
-    return(ent)
+    entropy=sum(exp$ent)
+    return(entropy)
 }
 
 cell_entropy <- function(nk) {
@@ -47,7 +51,9 @@ per_gene_info <- function(nk) {
         summarise(across(everything(), var)) %>%
         gather()
     names(std)=c('name', 'variance')
-    ent=gene_entropy(nk)
+    ent=nk %>%
+        summarise(across(everything(), gene_entropy)) %>%
+        gather()
     names(ent)=c('name', 'ent')
     
     genes=as_tibble(enframe(colSums(nk!=0))) %>%
@@ -90,7 +96,7 @@ nonrrna <- function(nk) {
 exps=c('species_mix', 'growth_mix', 'growth_light_mix')
 genes_of_interest=c('gadAXW', 'araC', 'recAX', 'rpoH')
 
-cells_per_gene=tibble(gene=as.character(),
+cells_per_gene=tibble(name=as.character(),
                       numcells=as.integer(),
                       avg=as.numeric(),
                       variance=as.numeric(),
@@ -119,12 +125,15 @@ for (i in exps) {
     nkfile=file.path(datadir, 'supp_data', paste0(i, '.tsv'))
     nk=read_table2(nkfile)
     nknames=c('cell', names(nk))
-    nk=read_table2(nkfile, col_names=nknames, skip=1)
+    names(nk)=nknames
     
     genes=per_gene_info(nk %>% select(-cell)) %>%
         mutate(experiment=i) 
     cells_per_gene=bind_rows(cells_per_gene, genes)
 
+    genescsv=file.path(dbxdir, paste0(i,'.genes.csv'))
+    write_csv(genes, genescsv)
+    
     cells=per_cell_info(nk) %>%
         mutate(experiment=i)
     genes_per_cell=bind_rows(genes_per_cell, cells)
@@ -144,6 +153,7 @@ for (i in exps) {
         mutate(experiment=i)
     allnonribo=bind_rows(allnonribo, notribo)
 }
+
 
 pergenefile=file.path(dbxdir, 'cells_per_gene.pdf')
 pdf(pergenefile, h=7, w=12)
@@ -175,6 +185,7 @@ for (i in exps) {
 dev.off()
 
 
+
 goitabfile=file.path(dbxdir, 'genes_of_interest.csv')
 len=length(table(geneinfo$count))
 histinfo=tibble(expression_count=as.character(),
@@ -195,6 +206,8 @@ for (i in exps) {
 }
 histord=histinfo[, c(3,4,1,2)]
 write_csv(histord, goitabfile)
+
+
 
 
 highestcsv=file.path(dbxdir, 'highest_expression.csv')
@@ -226,3 +239,31 @@ ggplot(allnonribo, aes(x=pseudocount, colour=experiment, fill=experiment, alpha=
 dev.off()
 
     
+genepos=which(rowSums(outer(cells_per_gene$name, genes_of_interest, str_detect))>0)
+goi=cells_per_gene[genepos,] %>%
+    rowwise() %>%
+    mutate(rank=sum(avg<=cells_per_gene$avg[cells_per_gene$experiment==experiment]))
+goirankcsv=file.path(dbxdir, 'sc_rank.csv')
+write_csv(goi, goirankcsv)
+
+
+
+###Get info on specific genes
+genes=c('U00096:fliAZ-tcyJ','U00096:fliFGHIJK', 'U00096:fliLMNOPQR', 'U00096:fliC', 'U00096:motAB-cheAW', 'U00096:tar-tap-cheRBYZ')
+i=exps[2]
+nkfile=file.path(datadir, 'supp_data', paste0(i, '.tsv'))
+nk=read_table2(nkfile)
+nknames=c('cell', names(nk))
+names(nk)=nknames
+
+genecols=which(nknames %in% genes)
+geneinfo=nk[,genecols]
+growthgoicsv=file.path(dbxdir, 'growth_mix_goi.csv')
+write_csv(geneinfo, growthgoicsv)
+
+
+expcells=geneinfo[which(rowSums(geneinfo)!=0),]
+patcells=expcells[which(rowSums(expcells)>1),]
+                  
+    
+

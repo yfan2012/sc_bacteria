@@ -78,3 +78,10 @@ plot_grid(goibarstpm, goibarsnum)
 print(tpmdensity)
 print(numreaddensity)
 dev.off()
+
+
+goirank=goiexps %>%
+    rowwise() %>%
+    mutate(rank=sum(allexps$TPM[allexps$samp==samp]>TPM))
+goirankcsv=file.path(dbxdir, 'goirank.csv')
+write_csv(goirank, goirankcsv)

@@ -81,7 +81,7 @@ info=tibble(nums=seq(0, 63, 1)) %>%
     rowwise() %>%
     mutate(states=paste(as.character(as.binary(nums, n=6)), collapse=''))
 
-perms=foreach(i=1:5000, .combine=cbind) %dopar% {
+perms=foreach(i=1:50000, .combine=cbind) %dopar% {
     perm=permute_genes(goi)
     result=matrix(0, nrow=64, ncol=1)
     rownames(result)=info$states
@@ -89,7 +89,49 @@ perms=foreach(i=1:5000, .combine=cbind) %dopar% {
     return(result)
 }
     
+toplot=tibble('g0'=perms['000000',],
+              'g1'=perms['000001',],
+              'g2'=perms['000010',],
+              'g3'=perms['000100',],
+              'g4'=perms['001000',],
+              'g5'=perms['010000',],
+              'g6'=perms['100000',],
+              'c7'=perms['001100',])
 
+
+
+library(RColorBrewer)
+library(cowplot)
+plot_permute <- function(toplotgene, state) {
+    geneplot=tibble(gene=toplotgene)
+
+    bound=expected$ratio[expected$state==state]
+    pval=sum(geneplot>bound)/dim(geneplot)[1]
+    
+    plot=ggplot(geneplot, aes(x=gene, alpha=.3, colour='#66C2A5', fill='#66C2A5')) +
+        geom_histogram() +
+        ggtitle(paste0('expression state: ', state)) +
+        geom_vline(xintercept=bound) +
+        xlim(.7,1.2) +
+        scale_colour_brewer(palette='Set2') +
+        scale_fill_brewer(palette='Set2') +
+        theme_bw()
+    return(plot)
+}
+
+g1plot=plot_permute(toplot$g1, '000001')
+g2plot=plot_permute(toplot$g2, '000010')
+g3plot=plot_permute(toplot$g3, '000100')
+g4plot=plot_permute(toplot$g4, '001000')
+g5plot=plot_permute(toplot$g5, '010000')
+g6plot=plot_permute(toplot$g6, '100000')
+
+
+
+permpdf=file.path(dbxdir,'perm_distributions.pdf')
+pdf(permpdf, h=6, w=17)
+plot_grid(g1plot, g2plot, g3plot, g4plot, g5plot, g6plot, ncol=3, align='v')
+dev.off()
 
 
 

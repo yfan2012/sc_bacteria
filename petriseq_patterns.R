@@ -6,7 +6,8 @@ registerDoParallel(cl, cores=36)
 clusterCall(cl, function() library(tidyverse))
 
 dbxdir='~/Dropbox/yfan/dunlop/single_cell/petriseq'
-goifile=file.path(dbxdir,'growth_mix_goi.csv')
+##goifile=file.path(dbxdir, 'growth_mix_goi.csv')
+goifile=file.path(dbxdir, 'growth_mix_goi_control.csv')
 
 goi=read_csv(goifile)
 goi[goi>1]=1
@@ -18,6 +19,7 @@ goi_collapse=goi %>%
     rowwise() %>%
     summarise(name=paste0(c_across(), collapse=''))
 pop=table(goi_collapse$name)
+
 getprob <- function(code, geneprobs) {
     ##calculates prob of each state
     ##ones where each gene has a non-zero, non-one count are a little sus
@@ -81,6 +83,7 @@ info=tibble(nums=seq(0, 63, 1)) %>%
     rowwise() %>%
     mutate(states=paste(as.character(as.binary(nums, n=6)), collapse=''))
 
+
 perms=foreach(i=1:50000, .combine=cbind) %dopar% {
     perm=permute_genes(goi)
     result=matrix(0, nrow=64, ncol=1)
@@ -102,7 +105,7 @@ toplot=tibble('g0'=perms['000000',],
 
 library(RColorBrewer)
 library(cowplot)
-plot_permute <- function(toplotgene, state) {
+plot_permute <- function(toplotgene, state, expected) {
     geneplot=tibble(gene=toplotgene)
 
     bound=expected$ratio[expected$state==state]
@@ -112,7 +115,7 @@ plot_permute <- function(toplotgene, state) {
         geom_histogram() +
         ggtitle(paste0('expression state: ', state)) +
         geom_vline(xintercept=bound) +
-        xlim(.7,1.2) +
+        xlim(.7, 1.2) +
         scale_colour_brewer(palette='Set2') +
         scale_fill_brewer(palette='Set2') +
         theme_bw()
@@ -127,8 +130,7 @@ g5plot=plot_permute(toplot$g5, '010000')
 g6plot=plot_permute(toplot$g6, '100000')
 
 
-
-permpdf=file.path(dbxdir,'perm_distributions.pdf')
+permpdf=file.path(dbxdir,'perm_distributions_control.pdf')
 pdf(permpdf, h=6, w=17)
 plot_grid(g1plot, g2plot, g3plot, g4plot, g5plot, g6plot, ncol=3, align='v')
 dev.off()

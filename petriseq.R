@@ -261,9 +261,15 @@ geneinfo=nk[,genecols]
 growthgoicsv=file.path(dbxdir, 'growth_mix_goi.csv')
 write_csv(geneinfo, growthgoicsv)
 
-
 expcells=geneinfo[which(rowSums(geneinfo)!=0),]
 patcells=expcells[which(rowSums(expcells)>1),]
                   
     
+
+###get info on control genes
+genes=c('U00096:elaB', 'U00096:phoPQ', 'U00096:lldPRD', 'U00096:wza-wzb-wzc-wcaAB', 'U00096:csgDEFG', 'U00096:norVW')
+genecols=which(nknames %in% genes)
+geneinfo=nk[,genecols]
+growthgoicsv=file.path(dbxdir, 'growth_mix_goi_control.csv')
+write_csv(geneinfo, growthgoicsv)
 
